@@ -25,7 +25,12 @@ body {
   width: 100% !important;
   height: 100% !important;
   outline: none;
-  touch-action: manipulation;
+  pointer-events: auto;
+  touch-action: none;
+}
+#gameContainer canvas:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: -2px;
 }
 .webgl-content .logo, .webgl-content .progress {
   position: absolute;

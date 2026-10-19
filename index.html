@@ -23,22 +23,62 @@
       </footer>
     </main>
 
-    <!-- Keep Unity's legacy loader after the game container exists in the DOM. -->
     <script>
       (function () {
         "use strict";
 
         var gameInstance = null;
+        var gameContainer = document.getElementById("gameContainer");
+        var gameCanvas = null;
 
         function showLoadError() {
           var error = document.getElementById("gameLoadError");
           if (error) error.hidden = false;
         }
 
-        window.addEventListener("error", function (event) {
-          if (event && event.target && event.target.tagName === "SCRIPT") {
-            showLoadError();
+        function focusGameCanvas() {
+          if (!gameCanvas) gameCanvas = gameContainer.querySelector("canvas");
+          if (gameCanvas) {
+            gameCanvas.tabIndex = 0;
+            gameCanvas.style.pointerEvents = "auto";
+            try {
+              gameCanvas.focus({ preventScroll: true });
+            } catch (_) {
+              gameCanvas.focus();
+            }
           }
+        }
+
+        // Unity creates its canvas asynchronously. Make it focusable so keyboard
+        // input works after the player clicks/taps the game.
+        var canvasObserver = new MutationObserver(function () {
+          var canvas = gameContainer.querySelector("canvas");
+          if (!canvas) return;
+          if (canvas !== gameCanvas) {
+            gameCanvas = canvas;
+            gameCanvas.tabIndex = 0;
+            gameCanvas.setAttribute("aria-label", "Flappy Bird game. Click or press Space to flap.");
+            gameCanvas.addEventListener("pointerdown", function () {
+              focusGameCanvas();
+            });
+            gameCanvas.addEventListener("click", function () {
+              focusGameCanvas();
+            });
+          }
+        });
+        canvasObserver.observe(gameContainer, { childList: true, subtree: true });
+
+        // Space should flap instead of scrolling the page while the game is active.
+        // Do not block the event: Unity still needs to receive the keyboard input.
+        window.addEventListener("keydown", function (event) {
+          if (event.code !== "Space" && event.key !== " ") return;
+          var target = event.target;
+          if (target && /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)) return;
+          if (gameCanvas) event.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener("error", function (event) {
+          if (event && event.target && event.target.tagName === "SCRIPT") showLoadError();
         }, true);
 
         window.flappyToggleFullscreen = function () {
@@ -81,7 +121,6 @@
           }
         }
 
-        // Load these classic scripts only after #gameContainer has been created.
         var progressScript = document.createElement("script");
         progressScript.src = "TemplateData/UnityProgress.js";
         progressScript.onload = function () {
