@@ -1,26 +1,84 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | FlappyProject</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="theme-color" content="#231F20">
+    <title>FlappyProject — Flappy Bird</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <script src="TemplateData/UnityProgress.js"></script>
     <script src="Build/UnityLoader.js"></script>
     <script>
-      var gameInstance = UnityLoader.instantiate("gameContainer", "Build/New folder.json", {onProgress: UnityProgress});
+      (function () {
+        "use strict";
+        var gameInstance = null;
+        var gameContainer = document.getElementById("gameContainer");
+
+        function showLoadError() {
+          var error = document.getElementById("gameLoadError");
+          if (error) {
+            error.hidden = false;
+          }
+        }
+
+        window.addEventListener("error", function (event) {
+          if (event && event.target && event.target.tagName === "SCRIPT") {
+            showLoadError();
+          }
+        }, true);
+
+        window.addEventListener("DOMContentLoaded", function () {
+          if (!window.UnityLoader || typeof window.UnityLoader.instantiate !== "function") {
+            showLoadError();
+            return;
+          }
+
+          try {
+            gameInstance = window.UnityLoader.instantiate(
+              "gameContainer",
+              "Build/New folder.json",
+              { onProgress: UnityProgress }
+            );
+            window.flappyGameInstance = gameInstance;
+          } catch (error) {
+            showLoadError();
+            if (window.console && typeof window.console.error === "function") {
+              console.error("Unable to initialize FlappyProject.", error);
+            }
+          }
+        });
+
+        window.addEventListener("orientationchange", function () {
+          if (gameInstance && typeof gameInstance.Module === "object" &&
+              gameInstance.Module && typeof gameInstance.Module.setCanvasSize === "function") {
+            gameInstance.Module.setCanvasSize(0, 0);
+          }
+        });
+
+        window.flappyToggleFullscreen = function () {
+          if (!gameInstance || typeof gameInstance.SetFullscreen !== "function") {
+            showLoadError();
+            return;
+          }
+          gameInstance.SetFullscreen(1);
+        };
+      }());
     </script>
   </head>
   <body>
-    <div class="webgl-content">
-      <div id="gameContainer" style="width: 960px; height: 600px"></div>
-      <div class="footer">
-        <div class="webgl-logo"></div>
-        <div class="fullscreen" onclick="gameInstance.SetFullscreen(1)"></div>
-        <a href="flappybird.apk">Download Android File</a>
+    <main class="webgl-content">
+      <div id="gameContainer" aria-label="Flappy Bird game"></div>
+      <p id="gameLoadError" class="game-load-error" role="alert" hidden>
+        The game could not be loaded. Please refresh the page or try a browser with WebGL support.
+      </p>
+      <footer class="footer">
+        <div class="webgl-logo" aria-hidden="true"></div>
+        <button class="fullscreen" type="button" aria-label="Enter fullscreen" onclick="flappyToggleFullscreen()"></button>
+        <a class="download-link" href="Android%20File/flappybird.apk" download>Download Android app</a>
         <div class="title">FlappyProject</div>
-      </div>
-    </div>
+      </footer>
+    </main>
   </body>
 </html>
