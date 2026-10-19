@@ -8,64 +8,6 @@
     <title>FlappyProject — Flappy Bird</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
-    <script src="TemplateData/UnityProgress.js"></script>
-    <script src="Build/UnityLoader.js"></script>
-    <script>
-      (function () {
-        "use strict";
-        var gameInstance = null;
-        var gameContainer = document.getElementById("gameContainer");
-
-        function showLoadError() {
-          var error = document.getElementById("gameLoadError");
-          if (error) {
-            error.hidden = false;
-          }
-        }
-
-        window.addEventListener("error", function (event) {
-          if (event && event.target && event.target.tagName === "SCRIPT") {
-            showLoadError();
-          }
-        }, true);
-
-        window.addEventListener("DOMContentLoaded", function () {
-          if (!window.UnityLoader || typeof window.UnityLoader.instantiate !== "function") {
-            showLoadError();
-            return;
-          }
-
-          try {
-            gameInstance = window.UnityLoader.instantiate(
-              "gameContainer",
-              "Build/New folder.json",
-              { onProgress: UnityProgress }
-            );
-            window.flappyGameInstance = gameInstance;
-          } catch (error) {
-            showLoadError();
-            if (window.console && typeof window.console.error === "function") {
-              console.error("Unable to initialize FlappyProject.", error);
-            }
-          }
-        });
-
-        window.addEventListener("orientationchange", function () {
-          if (gameInstance && typeof gameInstance.Module === "object" &&
-              gameInstance.Module && typeof gameInstance.Module.setCanvasSize === "function") {
-            gameInstance.Module.setCanvasSize(0, 0);
-          }
-        });
-
-        window.flappyToggleFullscreen = function () {
-          if (!gameInstance || typeof gameInstance.SetFullscreen !== "function") {
-            showLoadError();
-            return;
-          }
-          gameInstance.SetFullscreen(1);
-        };
-      }());
-    </script>
   </head>
   <body>
     <main class="webgl-content">
@@ -80,5 +22,78 @@
         <div class="title">FlappyProject</div>
       </footer>
     </main>
+
+    <!-- Keep Unity's legacy loader after the game container exists in the DOM. -->
+    <script>
+      (function () {
+        "use strict";
+
+        var gameInstance = null;
+
+        function showLoadError() {
+          var error = document.getElementById("gameLoadError");
+          if (error) error.hidden = false;
+        }
+
+        window.addEventListener("error", function (event) {
+          if (event && event.target && event.target.tagName === "SCRIPT") {
+            showLoadError();
+          }
+        }, true);
+
+        window.flappyToggleFullscreen = function () {
+          if (!gameInstance || typeof gameInstance.SetFullscreen !== "function") {
+            showLoadError();
+            return;
+          }
+          gameInstance.SetFullscreen(1);
+        };
+
+        window.addEventListener("orientationchange", function () {
+          if (gameInstance && gameInstance.Module &&
+              typeof gameInstance.Module.setCanvasSize === "function") {
+            gameInstance.Module.setCanvasSize(0, 0);
+          }
+        });
+
+        function startGame() {
+          if (!window.UnityLoader || typeof window.UnityLoader.instantiate !== "function") {
+            showLoadError();
+            console.error("UnityLoader failed to load. Check Build/UnityLoader.js.");
+            return;
+          }
+          if (typeof window.UnityProgress !== "function") {
+            showLoadError();
+            console.error("UnityProgress failed to load. Check TemplateData/UnityProgress.js.");
+            return;
+          }
+
+          try {
+            gameInstance = window.UnityLoader.instantiate(
+              "gameContainer",
+              "Build/New folder.json",
+              { onProgress: window.UnityProgress }
+            );
+            window.flappyGameInstance = gameInstance;
+          } catch (error) {
+            showLoadError();
+            console.error("Unable to initialize FlappyProject.", error);
+          }
+        }
+
+        // Load these classic scripts only after #gameContainer has been created.
+        var progressScript = document.createElement("script");
+        progressScript.src = "TemplateData/UnityProgress.js";
+        progressScript.onload = function () {
+          var loaderScript = document.createElement("script");
+          loaderScript.src = "Build/UnityLoader.js";
+          loaderScript.onload = startGame;
+          loaderScript.onerror = showLoadError;
+          document.body.appendChild(loaderScript);
+        };
+        progressScript.onerror = showLoadError;
+        document.body.appendChild(progressScript);
+      }());
+    </script>
   </body>
 </html>
